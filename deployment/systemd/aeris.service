@@ -1,0 +1,16 @@
+[Unit]
+Description=Aeris Ground Station
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/aeris
+ExecStart=/home/pi/aeris/.venv/bin/python -m uvicorn aeris.ingest.wifi_receiver:app --host 0.0.0.0 --port 8000
+ExecStartPost=/bin/sleep 2
+ExecStartPost=/home/pi/aeris/.venv/bin/streamlit run aeris/dashboard/app.py --server.port 8501
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

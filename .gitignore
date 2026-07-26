@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.whl
+.venv/
+venv/
+*.egg
+
+# Arduino / PlatformIO build artifacts
+.pio/
+.pioenvs/
+.piolibdeps/
+build/
+
+# Model weights >50MB — use Git LFS
+*.pt
+*.onnx
+!models/*.md
+
+# Large data files — use DVC or external storage
+data/plantvillage_subset/*
+!data/plantvillage_subset/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Streamlit
+.streamlit/secrets.toml
