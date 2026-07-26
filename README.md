@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/aeris_banner.png" alt="Aeris Banner" width="100%"/>
+  <img src="docs/assets/aeris_banner.png" alt="Aeris Banner" width="600"/>
 </p>
 
 <h1 align="center">Aeris</h1>
