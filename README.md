@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/aeris_banner.png" alt="Aeris Banner" width="800"/>
+  <img src="docs/assets/aeris_banner.png" alt="Aeris Banner" width="600"/>
 </p>
 
 <h1 align="center">Aeris</h1>
@@ -221,7 +221,7 @@ Aeris/
 │   ├── HARDWARE_WIRING.md       # Pin maps, power distribution, wiring
 │   ├── DATASET.md               # PlantVillage dataset preparation
 │   ├── DEMO_SCRIPT.md           # Step-by-step demo instructions
-│   └── JUDGES_QUICKSTART.md     # 2-minute guide for hackathon judges
+│   └── JUDGES_QUICKSTART.md     # 2-minute quickstart for reviewers
 │
 ├── demo/
 │   ├── DEMO_RUNBOOK.md          # Quick reference card for live demo
@@ -276,7 +276,7 @@ Total estimated cost: **Rs. 12,000 - 15,000**
 
 ## Demo
 
-### Live Demo Flow (2 minutes)
+### End-to-End Flow (~2 minutes)
 
 | Step | What Happens | Time |
 |---|---|---|
@@ -287,19 +287,18 @@ Total estimated cost: **Rs. 12,000 - 15,000**
 | 5 | Dashboard map fills with red/green markers | 2s |
 | 6 | Hindi alert appears on screen | 5s |
 
-### Fallback Plan
+### Software-Only Mode
 
-If the drone hardware fails during the hackathon demo:
+If drone hardware is not available, you can test the full pipeline on saved images:
 
 ```bash
-# Play the pre-recorded flight video, then run the pipeline on saved images
 python scripts/run_pipeline.py --image ../data/sample_captures/rice_blast.jpg
 streamlit run src/aeris/dashboard/app.py
 ```
 
-### Props
+### Physical Test Setup
 
-Bring a potted plant with printed "disease spot" stickers (in `demo/fake_disease_targets/`). Point the RGB camera at the leaves during live demo to show real-time classification.
+A potted plant with printed "disease spot" stickers (templates in `demo/fake_disease_targets/`) works well for testing the RGB camera classification in real time.
 
 ---
 
@@ -322,11 +321,11 @@ AGRISCOUT_ALERT_LANGUAGE=hindi
 
 ## Why Not Just NDVI?
 
-This is the most common question judges will ask. Here is the answer:
+This is the most common question people ask. Here is the short answer:
 
 NDVI tells you a plant is stressed. It does not tell you *why*. A low NDVI reading could mean nitrogen deficiency, water stress, fungal blight, or insect damage. A farmer who sprays fungicide on a nitrogen-deficient field wastes money and harms the soil.
 
-Our approach: use NDVI as a **cheap, fast trigger** (Stage 1) to narrow down which zones need closer inspection. Then send in the RGB camera at low altitude and let a convolutional neural network (Stage 2) perform the actual diagnosis based on lesion shape, color, and texture. Finally, factor in weather conditions (Stage 3) to predict whether the disease will spread.
+The approach here: use NDVI as a **cheap, fast trigger** (Stage 1) to narrow down which zones need closer inspection. Then send in the RGB camera at low altitude and let a convolutional neural network (Stage 2) perform the actual diagnosis based on lesion shape, color, and texture. Finally, factor in weather conditions (Stage 3) to predict whether the disease will spread.
 
 NDVI is 10% of the system. The CNN is the diagnostic engine.
 
@@ -334,18 +333,18 @@ NDVI is 10% of the system. The CNN is the diagnostic engine.
 
 ## Roadmap
 
-- [ ] Autonomous waypoint flight via ArduPilot/PX4 (post-hackathon)
+- [ ] Autonomous waypoint flight via ArduPilot/PX4
 - [ ] Multispectral camera upgrade (RedEdge-style 5-band)
 - [ ] On-device inference using ESP32-S3 + TFLite micro
-- [ ] Whatsapp/SMS alert delivery via Twilio
+- [ ] WhatsApp/SMS alert delivery via Twilio
 - [ ] Multi-field aggregation dashboard for FPOs (Farmer Producer Organizations)
 - [ ] Integration with government soil health card data
 
 ---
 
-## Team
+## Author
 
-Built for **Smart India Hackathon 2026** by Team Aeris.
+Built by [Akash Naickar](https://github.com/AkashNaickar).
 
 ---
 
