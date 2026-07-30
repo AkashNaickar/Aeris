@@ -38,45 +38,70 @@ Indian farmers lose **35% of crop yield** to pest and disease damage every year 
 
 ## How It Works
 
-The system has two physical halves: the **drone** (data collection) and the **ground station** (analysis + output).
+The system has two physical halves — the **drone** (airborne data collection) and the **ground station** (local analysis + alerting) — connected by Wi-Fi on landing, with zero internet dependency.
 
+```mermaid
+flowchart TB
+    %% ── Style Definitions ──────────────────────────────────────────
+    classDef capture fill:#7b2ff7,stroke:#a855f7,stroke-width:2px,color:#fff
+    classDef storage fill:#2563eb,stroke:#3b82f6,stroke-width:2px,color:#fff
+    classDef offload fill:#0891b2,stroke:#06b6d4,stroke-width:2px,color:#fff,stroke-dasharray:6 3
+    classDef stress   fill:#dc2626,stroke:#ef4444,stroke-width:2px,color:#fff
+    classDef healthy  fill:#16a34a,stroke:#22c55e,stroke-width:2px,color:#fff
+    classDef classify fill:#9333ea,stroke:#a855f7,stroke-width:2px,color:#fff
+    classDef risk     fill:#ea580c,stroke:#f97316,stroke-width:2px,color:#fff
+    classDef dash     fill:#0d9488,stroke:#14b8a6,stroke-width:2px,color:#fff
+    classDef alert    fill:#e11d48,stroke:#f43f5e,stroke-width:3px,color:#fff
+
+    %% ── DRONE SUBGRAPH ─────────────────────────────────────────────
+    subgraph Drone["✈️  F450 Drone — In-Flight Capture  (100% Offline)"]
+        direction TB
+        NIR["📷 ESP32-NoIR-CAM<br/>NIR imagery"]:::capture
+        RGB["📷 ESP32-RGB-CAM<br/>Lesion close-ups"]:::capture
+        GPS["🛰️ NEO-6M GPS<br/>Lat/Lon every capture"]:::capture
+        SD["💾 SD Card<br/><code>capture_{ms}_{lat}_{lon}.jpg</code>"]:::storage
+
+        NIR & RGB & GPS --> SD
+    end
+
+    %% ── OFFLOAD ────────────────────────────────────────────────────
+    WIFI{{"📡 Wi-Fi AP  (ESP32 → FastAPI /upload)"}}:::offload
+
+    SD -. "✈️  On landing<br/>connect & pull" .-> WIFI
+
+    %% ── GROUND STATION SUBGRAPH ────────────────────────────────────
+    subgraph Ground["🖥️  Ground Station — 3-Stage Pipeline  (Laptop / RPi)"]
+        direction TB
+
+        P1["Stage 1  🔬 Macro Stress<br/>NDVI / Vegetation Index"]:::stress
+        P2["Stage 2  🧠 Disease Classification<br/>YOLOv8-nano (3 MB ONNX)"]:::classify
+        P3["Stage 3  📊 Risk Forecast<br/>confidence × microclimate"]:::risk
+        DASH["📈 Dashboard<br/>Streamlit + Folium heatmap"]:::dash
+
+        WIFI --> P1
+
+        P1 -->|"NDVI &lt; 0.3 → STRESSED 🔴"| P2
+        P1 -->|"NDVI ≥ 0.3 → HEALTHY 🟢"| HEALTH["✅ Mark Safe Zone"]:::healthy
+
+        P2 --> P3
+        P3 --> DASH
+    end
+
+    %% ── ALERT ──────────────────────────────────────────────────────
+    ALERT["🔔 Farmer Alert<br/>Hindi / English • GPS pin<br/>Disease + Risk Level"]:::alert
+
+    DASH -.-> ALERT
+
+    %% ── Data Flow Annotation ───────────────────────────────────────
+    DF1["① Capture<br/>Every 5 s: deep-sleep wake →<br/>JPEG grab → GPS fix → SD"]
+    DF2["② Offload<br/>Land → Wi-Fi AP →<br/>FastAPI pulls all images"]
+    DF3["③ Analyze<br/>3-stage pipeline<br/>runs automatically"]
+    DF4["④ Alert<br/>Color-coded field map +<br/>vernacular warning"]
+
+    DF1 -.-> DF2 -.-> DF3 -.-> DF4
 ```
-                    100% OFFLINE
-                    ============
 
-  ┌──────────────────────┐          ┌───────────────────────────────┐
-  │      F450 DRONE      │  Wi-Fi   │        GROUND STATION         │
-  │                      │  offload │        (Laptop / RPi)         │
-  │  ┌────────────────┐  │  on      │  ┌─────────────────────────┐  │
-  │  │ ESP32-NoIR-CAM │──┤  landing │  │ Stage 1: NDVI / VARI    │  │
-  │  │  (NIR capture) │  │ ──────►  │  │  Macro stress detection │  │
-  │  ├────────────────┤  │          │  ├─────────────────────────┤  │
-  │  │ ESP32-RGB-CAM  │──┤          │  │ Stage 2: YOLOv8-nano    │  │
-  │  │  (lesion shots)│  │          │  │  Disease classification │  │
-  │  ├────────────────┤  │          │  ├─────────────────────────┤  │
-  │  │ NEO-6M GPS     │──┤          │  │ Stage 3: Risk Forecast  │  │
-  │  │  (lat/lon tag) │  │          │  │  Microclimate + spread  │  │
-  │  ├────────────────┤  │          │  ├─────────────────────────┤  │
-  │  │ SD Card        │  │          │  │ Dashboard (Streamlit)   │  │
-  │  │  (local store) │  │          │  │  GPS heatmap + alerts   │  │
-  │  └────────────────┘  │          │  └─────────────────────────┘  │
-  └──────────────────────┘          └───────────────────────────────┘
-                                                  │
-                                                  ▼
-                                    ┌───────────────────────┐
-                                    │   Farmer gets alert   │
-                                    │   in Hindi / English  │
-                                    │   with GPS location   │
-                                    │   of diseased zone    │
-                                    └───────────────────────┘
-```
-
-### Data Flow (Step by Step)
-
-1. **Capture** - The drone flies over the field. Every 5 seconds, the ESP32 wakes from deep sleep, grabs a JPEG from the camera, reads the GPS fix, and saves the file to SD as `capture_{millis}_{lat}_{lon}.jpg`.
-2. **Offload** - On landing, the ESP32 spins up a Wi-Fi AP. The ground station connects and pulls all images via a FastAPI endpoint (`/upload`).
-3. **Analyze** - Images enter the 3-stage pipeline (see below).
-4. **Alert** - The dashboard shows a color-coded field map. The farmer gets a one-line alert in their own language: *"Disease: Rice Leaf Blast. Risk is HIGH. Take action now."*
+<small>**① Capture** — Every 5 s the ESP32 wakes from deep sleep, grabs a JPEG, reads the GPS fix, and writes `capture_{millis}_{lat}_{lon}.jpg` to SD. &nbsp;·&nbsp; **② Offload** — On landing the ESP32 starts a Wi-Fi AP; the ground station connects and pulls all images via FastAPI. &nbsp;·&nbsp; **③ Analyze** — Images enter the 3-stage pipeline (NDVI → YOLOv8 → Risk Score). &nbsp;·&nbsp; **④ Alert** — The dashboard renders a color-coded field map and fires a vernacular alert: *"Disease: Rice Leaf Blast. Risk is HIGH. Take action now."*</small>
 
 ---
 
